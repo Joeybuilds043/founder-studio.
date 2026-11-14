@@ -1,7 +1,17 @@
+
 import "server-only";
 
 export function getAIConfig() {
-  const provider = (process.env.AI_PROVIDER || "gemini").toLowerCase();
+  const provider = (process.env.AI_PROVIDER || "openrouter").toLowerCase();
+
+  if (provider === "openrouter") {
+    return {
+      provider,
+      apiKey: process.env.OPENROUTER_API_KEY || "",
+      baseURL: "https://openrouter.ai/api/v1/",
+      model: process.env.OPENROUTER_MODEL || "openrouter/free",
+    };
+  }
 
   if (provider === "gemini") {
     return {
@@ -21,5 +31,5 @@ export function getAIConfig() {
     };
   }
 
-  throw new Error("Unsupported AI_PROVIDER. Use gemini or openai.");
+  throw new Error("Unsupported AI provider.");
 }
