@@ -6,7 +6,7 @@ This is an additive Next.js interface for the original Founder Skill project by 
 
 - Node.js 20.9+
 - Python 3.10+
-- Gemini API key from Google AI Studio (free tier available for selected models)
+- An OpenRouter API key (free models are available; usage is rate-limited)
 
 ## Run locally
 
@@ -18,18 +18,18 @@ npm install
 cp .env.example .env.local
 ```
 
-Create a free Gemini API key at https://aistudio.google.com/app/apikey, then add it to `.env.local`:
+Create an API key at https://openrouter.ai/settings/keys. Add it to `.env.local`:
 
 ```dotenv
-AI_PROVIDER=gemini
-GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-3.8-flash
-PANEL_CONCURRENCY=2
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=openrouter/free
+PANEL_CONCURRENCY=1
 MODEL_INPUT_USD_PER_MILLION=0
 MODEL_OUTPUT_USD_PER_MILLION=0
 ```
 
-Never commit `.env.local` or expose the key in browser code. Then start:
+Keep the key private. Never paste it into browser code, commit `.env.local`, or include it in screenshots. Then start:
 
 ```bash
 npm run dev
@@ -37,7 +37,7 @@ npm run dev
 
 Open http://localhost:3000.
 
-To use OpenAI instead, set `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
+To use Gemini or OpenAI instead, change `AI_PROVIDER` and set the corresponding server-side API key and model variables.
 
 ## Using the app
 
@@ -60,9 +60,13 @@ npm run typecheck
 npm run build
 ```
 
-## Free-tier limits and privacy
+## Free-model limits and privacy
 
-Gemini free-tier quotas depend on the selected model and can include requests-per-minute, tokens-per-minute and requests-per-day limits. Check the current quota in Google AI Studio. Free access is not unlimited. Google states that content submitted on the free tier may be used to improve its products. Do not submit confidential business, customer or personal data unless you accept the provider's terms.
+The `openrouter/free` router selects from currently available free models; the selected model can change between requests. OpenRouter documents free-model rate limits, including 20 requests per minute and typically 50 requests per day for free-tier accounts that have not purchased credits. Limits and model availability can change. Failed attempts may count toward the daily limit. A 5- or 10-person synthetic panel already consumes 5 or 10 model requests, before running the other agents. Keep panel concurrency at 1 and use small test panels. Do not configure paid-model fallbacks if the app must remain free.
+
+Free models can be slower, less consistent, or temporarily unavailable. Outputs from different underlying models may vary. Review important outputs rather than treating them as verified research. Check OpenRouter's current [free model catalogue](https://openrouter.ai/collections/free-models) and [rate-limit documentation](https://openrouter.ai/docs/api-reference/limits) before relying on a quota.
+
+Review OpenRouter's current data and privacy terms before submitting confidential business, customer or personal information. Free access is not unlimited and does not guarantee production availability.
 
 ## App caveats
 
