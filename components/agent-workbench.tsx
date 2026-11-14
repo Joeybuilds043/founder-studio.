@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { ArrowLeft, ArrowRight, Bot, Calculator, CheckCircle2, Clock3, Loader2, Play, ShieldAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { Button, Badge, Card } from "@/components/ui";
-import type { agents } from "@/lib/agents";
+import { agents } from "@/lib/agents";
 type Agent = typeof agents[number];
 const defaultCustomer = {
   business:"A new consumer business", target:"Urban adults who experience this problem regularly",
