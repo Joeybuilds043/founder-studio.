@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 .venv/
 *.tmp
+
+# Local secrets and generated application files
+.env*
+!.env.example
+.next/
+node_modules/
+founder/
