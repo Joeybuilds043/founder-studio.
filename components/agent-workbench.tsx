@@ -27,7 +27,7 @@ export function AgentWorkbench({agent}:{agent:Agent}) {
     setError("");setResult("");setBusy(true);
     try {
       const r=await fetch(`/api/agent/${agent.slug}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input,idea:idea||undefined})});
-      const data=await r.json();if(!r.ok)throw new Error(data.error||"Agent request failed");
+      const raw=await r.text();let data:any;try{data=raw?JSON.parse(raw):null;}catch{throw new Error(raw.trim().startsWith("<")?`App server returned an HTML error (HTTP ${r.status}). Restart the Codespace and check the server logs.`:`App server returned an empty or invalid response (HTTP ${r.status}).`);}if(!r.ok)throw new Error(data?.error||`Agent request failed (HTTP ${r.status})`);if(!data)throw new Error("App server returned an empty response.");
       setResult(data.result);setSavedFile(data.file);localStorage.setItem(`founder-done-${agent.slug}`,"1");
     } catch(e) {setError(e instanceof Error?e.message:"Unexpected error");} finally {setBusy(false);}
   }
@@ -36,7 +36,7 @@ export function AgentWorkbench({agent}:{agent:Agent}) {
     try {
       const customer=JSON.parse(customerJson);
       const r=await fetch("/api/panel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({customer,pitch:input,count})});
-      const data=await r.json();if(!r.ok)throw new Error(data.error||"Panel run failed");
+      const raw=await r.text();let data:any;try{data=raw?JSON.parse(raw):null;}catch{throw new Error(raw.trim().startsWith("<")?`App server returned an HTML error (HTTP ${r.status}). Restart the Codespace and check the server logs.`:`App server returned an empty or invalid response (HTTP ${r.status}).`);}if(!r.ok)throw new Error(data?.error||`Panel run failed (HTTP ${r.status})`);if(!data)throw new Error("App server returned an empty response.");
       setResult(data.results);setSavedFile("panel/results.md");localStorage.setItem("founder-done-consumer","1");
     } catch(e) {setError(e instanceof Error?e.message:"Check the customer JSON");} finally {setBusy(false);}
   }
