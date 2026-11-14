@@ -13,6 +13,7 @@ const schema = z.object({
 async function buyerCall(api: { apiKey: string; baseURL: string; model: string }, brief: string) {
   const response = await fetch(`${api.baseURL}chat/completions`, {
     method: "POST", headers: { Authorization: `Bearer ${api.apiKey}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(25000),
     body: JSON.stringify({ model: api.model, temperature: 0.7, response_format: { type: "json_object" }, messages: [
       { role: "system", content: "You are a synthetic customer persona. Answer only as the persona in the supplied brief. Do not be polite or agreeable by default. Return JSON with id, buys (boolean), purchases_first_month (integer, 0 if not buying), reason_code (price, habit, need, trust, quality, convenience, timing, values, other), reason (string in the buyer's own voice), objection (main doubt in the buyer's own words), would_change_my_mind (one factor that could change the decision, or empty string), and optional numeric price_too_cheap, price_cheap, price_expensive, price_too_expensive in the stated currency. Include all four price fields only if the product and currency are clear; otherwise return null for them. These are synthetic responses, not real interviews." },
       { role: "user", content: brief }
@@ -42,18 +43,16 @@ export async function POST(request: Request) {
     const panelDir = path.join(FOUNDER_DIR, "panel");
     const personas = JSON.parse(await readFile(path.join(panelDir, "personas.json"), "utf8")) as Array<{id:string}>;
     const skill = await readSkill("consumer");
-    const concurrency = Math.max(1, Math.min(8, Number(process.env.PANEL_CONCURRENCY || 4)));
-    let cursor = 0;
+    const waveSize = Math.max(1, Math.min(10, Number(process.env.PANEL_CONCURRENCY || 10)));
     const errors: string[] = [];
-    const worker = async () => {
-      while (cursor < personas.length) {
-        const index = cursor++;
-        const persona = personas[index];
+    const codes = ["price","habit","need","trust","quality","convenience","timing","values","other"];
+    const price = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? v : null;
+    for (let offset = 0; offset < personas.length; offset += waveSize) {
+      const wave = personas.slice(offset, offset + waveSize);
+      await Promise.all(wave.map(async (persona) => {
         try {
           const brief = await readFile(path.join(panelDir, "briefs", `${persona.id}.md`), "utf8");
           const answer = await buyerCall(ai, `Original consumer research skill:\n${skill}\n\nBuyer brief:\n${brief}`);
-          const codes = ["price","habit","need","trust","quality","convenience","timing","values","other"];
-          const price = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? v : null;
           const normalized = {
             id: persona.id,
             buys: Boolean(answer.buys),
@@ -69,9 +68,8 @@ export async function POST(request: Request) {
           };
           await writeWorkspaceFile(`panel/answers/${persona.id}.json`, JSON.stringify(normalized, null, 2));
         } catch (error) { errors.push(`${persona.id}: ${error instanceof Error ? error.message : "failed"}`); }
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(concurrency, personas.length) }, worker));
+      }));
+    }
     const check = await runPython("panel.py", ["check"]);
     if (errors.length) return NextResponse.json({ error: "Some synthetic buyers failed.", errors, check: check.stdout }, { status: 502 });
     const tally = await runPython("panel.py", ["tally"]);
