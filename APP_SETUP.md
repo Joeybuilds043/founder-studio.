@@ -6,18 +6,24 @@ This application layer is additive. The original Founder Skill README, MIT licen
 
 - Node.js 20.9 or newer
 - Python 3.10 or newer
-- A Gemini API key from Google AI Studio (free tier available for selected models)
+- An OpenRouter API key; free models are available with usage limits
 
 ## Local setup
 
-1. Clone this repository and enter the project directory.
+1. Clone the repository and enter the project directory:
+
+   ```bash
+   git clone https://github.com/Joeybuilds043/founder-studio..git
+   cd founder-studio.
+   ```
+
 2. Run the local ignore helper before creating secrets:
 
    ```bash
    bash scripts/setup-local.sh
    ```
 
-   It adds generated files, runtime workspace data and `.env.local` to your local Git exclude file.
+   It excludes generated files, runtime workspace data and `.env.local` from local Git changes.
 3. Install dependencies:
 
    ```bash
@@ -25,14 +31,14 @@ This application layer is additive. The original Founder Skill README, MIT licen
    ```
 
 4. Copy `.env.example` to `.env.local`.
-5. Create a free Gemini API key at https://aistudio.google.com/app/apikey.
+5. Create an API key at https://openrouter.ai/settings/keys.
 6. Open `.env.local` and set:
 
    ```env
-   AI_PROVIDER=gemini
-   GEMINI_API_KEY=your_actual_key
-   GEMINI_MODEL=gemini-3.8-flash
-   PANEL_CONCURRENCY=2
+   AI_PROVIDER=openrouter
+   OPENROUTER_API_KEY=your_actual_key
+   OPENROUTER_MODEL=openrouter/free
+   PANEL_CONCURRENCY=1
    MODEL_INPUT_USD_PER_MILLION=0
    MODEL_OUTPUT_USD_PER_MILLION=0
    ```
@@ -46,9 +52,9 @@ This application layer is additive. The original Founder Skill README, MIT licen
 
 8. Open http://localhost:3000.
 
-### Optional: use OpenAI instead
+### Optional: use another provider
 
-Set `AI_PROVIDER=openai`, then provide `OPENAI_API_KEY` and `OPENAI_MODEL`. The key remains server-side.
+Set `AI_PROVIDER=gemini` and provide `GEMINI_API_KEY` and `GEMINI_MODEL`, or set `AI_PROVIDER=openai` and provide `OPENAI_API_KEY` and `OPENAI_MODEL`. Keys remain server-side.
 
 ## Using Founder Studio
 
@@ -64,11 +70,17 @@ Set `AI_PROVIDER=openai`, then provide `OPENAI_API_KEY` and `OPENAI_MODEL`. The 
 
 The consumer panel is synthetic. It is not a substitute for real interviews, surveys, supplier quotes or market research. Verify all external facts and financial assumptions.
 
+## Free model limits and privacy
+
+The `openrouter/free` router selects from currently available free models, so the underlying model can change between requests. OpenRouter documents free-model limits, including 20 requests per minute and typically 50 requests per day for accounts that have not purchased credits. Limits and model availability can change, and failed attempts may count. A panel of 10 synthetic personas uses 10 model calls; a panel of 50 uses 50 calls before any other agent requests. Start with 5 personas, keep concurrency at 1, and avoid paid-model fallbacks if zero-cost usage is required.
+
+Free models can be slower, less consistent, or temporarily unavailable. Check the current [free model catalogue](https://openrouter.ai/collections/free-models) and [rate-limit documentation](https://openrouter.ai/docs/api-reference/limits). Review OpenRouter's data and privacy terms before sending confidential business, customer or personal information.
+
 ## Python tools and validation
 
 The Python tools use the standard library. The app invokes them from the repository root and stores working data in `founder/`. Back up this folder separately.
 
-Run tests and checks:
+Run checks:
 
 ```bash
 python3 -m unittest discover -s tests
@@ -76,13 +88,10 @@ npm run typecheck
 npm run build
 ```
 
-## Free-tier limits and privacy
-
-Gemini free-tier access is limited by model-specific requests-per-minute, tokens-per-minute and requests-per-day quotas. Check your current quotas in Google AI Studio. A free tier is not unlimited; if a quota is reached, wait for reset or reduce panel size/concurrency. Google states that content submitted on the free tier may be used to improve its products. Do not send confidential business, customer or personal data unless you accept the provider's terms.
-
 ## Security and deployment
 
 - Keep API keys in server-side environment variables only.
+- Add `AI_PROVIDER`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` and `PANEL_CONCURRENCY` to the hosting platform's private environment-variable settings. Never add the real key to GitHub files.
 - Do not deploy publicly without authentication, authorization, request limits and persistent storage. The starter app does not include user accounts or tenant isolation.
 - On ephemeral hosting, local filesystem writes may be lost on restart; use persistent storage before production deployment.
 - PDF and Markdown exports are generated server-side.
