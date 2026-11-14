@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { AgentSlug } from "@/lib/agents";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -64,7 +65,7 @@ async function runBoard(ai: ReturnType<typeof getAIConfig>, idea: string, founde
   return { result, file, model: ai.provider === "openrouter" ? "openrouter/free" : ai.model, provider: ai.provider, subagents: 3 };
 }
 
-async function executeAgent(slug: string, body: z.infer<typeof schema>, updateProgress: (message: string) => Promise<void>) {
+async function executeAgent(slug: AgentSlug, body: z.infer<typeof schema>, updateProgress: (message: string) => Promise<void>) {
   try {
     const ai = getAIConfig();
     if (!ai.apiKey) throw new Error(`${ai.provider.toUpperCase()} API key is missing on the server.`);
