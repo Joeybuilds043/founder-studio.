@@ -42,8 +42,13 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         ]
       })
     });
-    const payload = await response.json();
-    if (!response.ok) return NextResponse.json({ error: payload.error?.message || `${ai.provider} request failed.` }, { status: response.status });
+    const raw = await response.text();
+    let payload: any;
+    try { payload = raw ? JSON.parse(raw) : null; } catch {
+      return NextResponse.json({ error: `${ai.provider.toUpperCase()} returned an invalid or empty response (HTTP ${response.status}). Check the provider/model availability and try again later.` }, { status: 502 });
+    }
+    if (!response.ok) return NextResponse.json({ error: payload?.error?.message || `${ai.provider} request failed (HTTP ${response.status}).` }, { status: response.status });
+    if (!payload || typeof payload !== "object") return NextResponse.json({ error: `${ai.provider.toUpperCase()} returned an empty response.` }, { status: 502 });
     const result = payload.choices?.[0]?.message?.content;
     if (typeof result !== "string" || !result.trim()) return NextResponse.json({ error: "The model returned an empty response." }, { status: 502 });
     const file = await saveAgentResult(slug, result);
