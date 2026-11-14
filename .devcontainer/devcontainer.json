@@ -1,0 +1,13 @@
+{
+  "name": "Founder Studio",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "postCreateCommand": "npm install",
+  "postAttachCommand": "bash -lc 'nohup npm run dev -- --hostname 0.0.0.0 > /tmp/founder-studio.log 2>&1 &'",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Founder Studio",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}
