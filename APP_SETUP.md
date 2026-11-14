@@ -6,28 +6,39 @@ This application layer is additive. The original Founder Skill README, MIT licen
 
 - Node.js 20.9 or newer
 - Python 3.10 or newer
-- An OpenAI API key with API billing enabled
+- A Gemini API key from Google AI Studio (free tier available for selected models)
 
 ## Local setup
 
 1. Clone this repository and enter the project directory.
-2. Run the local ignore helper before installing dependencies or creating secrets:
+2. Run the local ignore helper before creating secrets:
 
    ```bash
    bash scripts/setup-local.sh
    ```
 
-   It adds generated files, runtime workspace data and `.env.local` to your local Git exclude file. It does not modify the original upstream `.gitignore`.
-3. Install JavaScript dependencies:
+   It adds generated files, runtime workspace data and `.env.local` to your local Git exclude file.
+3. Install dependencies:
 
    ```bash
    npm install
    ```
 
 4. Copy `.env.example` to `.env.local`.
-5. Set `OPENAI_API_KEY` in `.env.local`. Keep this file private; never put the key in client-side code or commit it.
-6. Optionally set `OPENAI_MODEL`, `PANEL_CONCURRENCY`, and `PYTHON_BIN`.
-7. Start the development server:
+5. Create a free Gemini API key at https://aistudio.google.com/app/apikey.
+6. Open `.env.local` and set:
+
+   ```env
+   AI_PROVIDER=gemini
+   GEMINI_API_KEY=your_actual_key
+   GEMINI_MODEL=gemini-3.8-flash
+   PANEL_CONCURRENCY=2
+   MODEL_INPUT_USD_PER_MILLION=0
+   MODEL_OUTPUT_USD_PER_MILLION=0
+   ```
+
+   Do not add quotation marks around the key. Never paste it into React components, commit it, or share it in screenshots. Keep `.env.local` private.
+7. Start the app:
 
    ```bash
    npm run dev
@@ -35,36 +46,47 @@ This application layer is additive. The original Founder Skill README, MIT licen
 
 8. Open http://localhost:3000.
 
-The Python tools use only the Python standard library. The app invokes them from the repository root and stores working data in `founder/`. That folder is runtime data and should be backed up separately. On ephemeral hosting, local filesystem writes may be lost on restart; use persistent storage before production deployment.
+### Optional: use OpenAI instead
 
-## Validation
+Set `AI_PROVIDER=openai`, then provide `OPENAI_API_KEY` and `OPENAI_MODEL`. The key remains server-side.
 
-Run the original Python tests:
+## Using Founder Studio
+
+1. Start at the dashboard and write a concrete business idea: customer, problem, proposed solution, location and current stage.
+2. Open Board first. Ask it to challenge the assumptions, not simply endorse the idea.
+3. Continue through Competitors and Consumer. The Consumer panel creates AI-generated synthetic buyer personas; these are hypotheses, not real customer interviews.
+4. Use Pricing after you have a clear product, currency and price assumptions. Van Westendorp results need at least five complete price responses.
+5. Use Offer to define exactly what is sold, to whom, and why they would choose it.
+6. Complete the CFO inputs using the example schema in `skills/founder-cfo/example.json`. Use real costs and realistic sales capacity. The Python calculator performs the arithmetic.
+7. Continue with Marketing, Brand, Ops and Launch. Challenge each output and correct assumptions before moving on.
+8. Open Plan last. Read missing evidence and the verdict; do not treat a model-generated verdict as investment advice or proof of demand.
+9. Export the plan as Markdown or PDF when ready.
+
+The consumer panel is synthetic. It is not a substitute for real interviews, surveys, supplier quotes or market research. Verify all external facts and financial assumptions.
+
+## Python tools and validation
+
+The Python tools use the standard library. The app invokes them from the repository root and stores working data in `founder/`. Back up this folder separately.
+
+Run tests and checks:
 
 ```bash
 python3 -m unittest discover -s tests
-```
-
-Run TypeScript checks and a production build:
-
-```bash
 npm run typecheck
 npm run build
 ```
 
-## Workflow and data
+## Free-tier limits and privacy
 
-Each agent loads its corresponding original `skills/founder-*/SKILL.md` file on the server. Agent outputs are saved under `founder/`. The CFO endpoint invokes `unit_economics.py`; the consumer workflow invokes `panel.py` and, where enough valid price observations exist, `van_westendorp.py`; the plan endpoint invokes `compile.py`.
-
-The consumer panel consists of model-generated synthetic personas. It is not a substitute for interviews, surveys, or actual market validation. The displayed cost is an estimate, not a quote.
+Gemini free-tier access is limited by model-specific requests-per-minute, tokens-per-minute and requests-per-day quotas. Check your current quotas in Google AI Studio. A free tier is not unlimited; if a quota is reached, wait for reset or reduce panel size/concurrency. Google states that content submitted on the free tier may be used to improve its products. Do not send confidential business, customer or personal data unless you accept the provider's terms.
 
 ## Security and deployment
 
-- Keep `OPENAI_API_KEY` server-side.
-- Do not deploy this app publicly without adding authentication, authorization, request limits and persistent storage. The starter app does not yet include user accounts or tenant isolation.
-- Treat generated business outputs as hypotheses. Verify external market facts and all financial assumptions.
+- Keep API keys in server-side environment variables only.
+- Do not deploy publicly without authentication, authorization, request limits and persistent storage. The starter app does not include user accounts or tenant isolation.
+- On ephemeral hosting, local filesystem writes may be lost on restart; use persistent storage before production deployment.
 - PDF and Markdown exports are generated server-side.
 
 ## Attribution and license
 
-The underlying Founder Skill project is by Jake Schincariol: https://github.com/Jakeschincariol/founder-skill. Its original MIT `LICENSE` and copyright notice are retained in this repository. New web-app code is an additional layer and does not replace or rewrite the upstream materials.
+The underlying Founder Skill project is by Jake Schincariol: https://github.com/Jakeschincariol/founder-skill. Its original MIT license and copyright notice are retained. The web app is an additive layer.
