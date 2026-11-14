@@ -138,6 +138,19 @@ expensiveness, the optimal and the indifference price.
 python3 -m unittest discover -s tests -v
 ```
 
+## Founder Studio web app: live research setup
+
+The hosted Next.js app adds a server-side Tavily search integration for the Competitors, Pricing, Brand and Ops agents. It retrieves public search results, passes source snippets to the model as untrusted reference material, requires inline [S#] citations, and saves a source register plus the raw research snapshot under `founder/research/`. If research is not configured or returns no usable sources, these four agents stop rather than inventing market facts.
+
+To enable it:
+
+1. Create a Tavily API key at [Tavily](https://app.tavily.com/).
+2. In Railway, open the `founder-studio` service, select the production environment, and open Variables.
+3. Add `TAVILY_API_KEY` with the key as its value. Do not put the key in frontend code, GitHub, or a chat message.
+4. Redeploy the service, then run Competitors, Pricing, Brand or Ops again.
+
+The key is not currently configured in this Railway service. Until it is added, these four agents will show a clear setup error. Search results are point-in-time leads, not legal clearance, verified supplier quotes or proof that a price is still available. Confirm critical details with the source or relevant authority.
+
 ## Fine print
 
 **The board applies published frameworks. It is not those people.** The three
