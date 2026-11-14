@@ -18,9 +18,17 @@ async function buyerCall(api: { apiKey: string; baseURL: string; model: string }
       { role: "user", content: brief }
     ] })
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Buyer model call failed");
-  return JSON.parse(data.choices?.[0]?.message?.content || "{}");
+  const raw = await response.text();
+  let data: any;
+  try { data = raw ? JSON.parse(raw) : null; } catch {
+    throw new Error(`AI provider returned an invalid or empty response (HTTP ${response.status}).`);
+  }
+  if (!response.ok) throw new Error(data?.error?.message || `Buyer model call failed (HTTP ${response.status}).`);
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || !content.trim()) throw new Error("AI provider returned an empty buyer response.");
+  try { return JSON.parse(content); } catch {
+    throw new Error("AI provider returned buyer data that was not valid JSON. Try again or use a different free model.");
+  }
 }
 export async function POST(request: Request) {
   try {
