@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const results = await readFile(path.join(panelDir, "results.md"), "utf8");
     await writeWorkspaceFile("panel/results.md", results);
     let pricing = "";
-    try { const priceResult = await runPython("van_westendorp.py", ["founder/panel/answers", "--out", "founder/pricing-curve.md"]); pricing = priceResult.stdout; } catch { pricing = "Not enough complete price responses for Van Westendorp analysis (at least five are required)."; }
+    try { const curveJson = await runPython("van_westendorp.py", ["founder/panel/answers", "--json"]); await writeWorkspaceFile("pricing-curve.json", curveJson.stdout); const priceResult = await runPython("van_westendorp.py", ["founder/panel/answers", "--out", "founder/pricing-curve.md"]); pricing = priceResult.stdout; } catch { pricing = "Not enough complete price responses for Van Westendorp analysis (at least five are required)."; }
     return NextResponse.json({ count: personas.length, concurrency, tally: tally.stdout, results, pricing, synthetic: true });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Panel run failed." }, { status: 400 });

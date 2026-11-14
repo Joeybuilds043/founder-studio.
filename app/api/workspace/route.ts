@@ -11,5 +11,5 @@ export async function GET() {
   if (files.includes("numbers.json")) {
     try { const result = await runPython("unit_economics.py", ["--json"]); economics = JSON.parse(result.stdout); } catch { economics = null; }
   }
-  return NextResponse.json({ idea, files, outputs, economics });
+  let pricing: Record<string, unknown> | null = null;\n  try { pricing = JSON.parse(await readWorkspaceFile("pricing-curve.json")); } catch { pricing = null; }\n  return NextResponse.json({ idea, files, outputs, economics, pricing });
 }
