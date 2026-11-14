@@ -11,22 +11,29 @@ This application layer is additive. The original Founder Skill README, MIT licen
 ## Local setup
 
 1. Clone this repository and enter the project directory.
-2. Install JavaScript dependencies:
+2. Run the local ignore helper before installing dependencies or creating secrets:
+
+   ```bash
+   bash scripts/setup-local.sh
+   ```
+
+   It adds generated files, runtime workspace data and `.env.local` to your local Git exclude file. It does not modify the original upstream `.gitignore`.
+3. Install JavaScript dependencies:
 
    ```bash
    npm install
    ```
 
-3. Copy `.env.example` to `.env.local`.
-4. Set `OPENAI_API_KEY` in `.env.local`. Keep this file private; never put the key in client-side code or commit it.
-5. Optionally set `OPENAI_MODEL`, `PANEL_CONCURRENCY`, and `PYTHON_BIN`.
-6. Start the development server:
+4. Copy `.env.example` to `.env.local`.
+5. Set `OPENAI_API_KEY` in `.env.local`. Keep this file private; never put the key in client-side code or commit it.
+6. Optionally set `OPENAI_MODEL`, `PANEL_CONCURRENCY`, and `PYTHON_BIN`.
+7. Start the development server:
 
    ```bash
    npm run dev
    ```
 
-7. Open http://localhost:3000.
+8. Open http://localhost:3000.
 
 The Python tools use only the Python standard library. The app invokes them from the repository root and stores working data in `founder/`. That folder is runtime data and should be backed up separately. On ephemeral hosting, local filesystem writes may be lost on restart; use persistent storage before production deployment.
 
