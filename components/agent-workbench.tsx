@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ArrowLeft, ArrowRight, Bot, Calculator, CheckCircle2, Clock3, Loader2, Play, ShieldAlert, Users } from "lucide-react";
 import Link from "next/link";
