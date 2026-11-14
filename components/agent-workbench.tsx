@@ -19,17 +19,33 @@ export function AgentWorkbench({agent}:{agent:Agent}) {
   const [savedFile,setSavedFile]=useState("");
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
+  const [progress,setProgress]=useState("Starting agent");
   const [mode,setMode]=useState<"quick"|"full">("quick");
   const [customerJson,setCustomerJson]=useState(JSON.stringify(defaultCustomer,null,2));
   const [profileConfirmed,setProfileConfirmed]=useState(false);
   const count=mode==="quick"?20:100;
   
   async function runAgent() {
-    setError("");setResult("");setBusy(true);
+    setError("");setResult("");setBusy(true);setProgress("Submitting job to server");
     try {
       const r=await fetch(`/api/agent/${agent.slug}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input,idea:idea||undefined})});
-      const raw=await r.text();let data:any;try{data=raw?JSON.parse(raw):null;}catch{throw new Error(raw.trim().startsWith("<")?`App server returned an HTML error (HTTP ${r.status}). Restart the Codespace and check the server logs.`:`App server returned an empty or invalid response (HTTP ${r.status}).`);}if(!r.ok)throw new Error(data?.error||`Agent request failed (HTTP ${r.status})`);if(!data)throw new Error("App server returned an empty response.");
-      setResult(data.result);setSavedFile(data.file);localStorage.setItem(`founder-done-${agent.slug}`,"1");
+      const raw=await r.text();let data:any;try{data=raw?JSON.parse(raw):null;}catch{throw new Error(`App server returned an invalid response (HTTP ${r.status}).`);}
+      if(!r.ok)throw new Error(data?.error||`Agent request failed (HTTP ${r.status})`);
+      if(!data?.jobId)throw new Error("The server did not return a job ID. Please retry.");
+      const deadline=Date.now()+10*60*1000;
+      while(Date.now()<deadline) {
+        await new Promise(resolve=>setTimeout(resolve,1800));
+        const poll=await fetch(`/api/agent/${agent.slug}?jobId=${encodeURIComponent(data.jobId)}`,{cache:"no-store"});
+        const pollRaw=await poll.text();let status:any;try{status=pollRaw?JSON.parse(pollRaw):null;}catch{throw new Error(`Could not read job status (HTTP ${poll.status}).`);}
+        if(!poll.ok)throw new Error(status?.error||`Job status request failed (HTTP ${poll.status})`);
+        setProgress(status?.progress||"Processing");
+        if(status?.status==="completed") {
+          if(!status.result?.result)throw new Error("The agent completed without returning an output. Check the workspace and retry.");
+          setResult(status.result.result);setSavedFile(status.result.file||"");localStorage.setItem(`founder-done-${agent.slug}`,"1");return;
+        }
+        if(status?.status==="failed")throw new Error(status.error||"The agent job failed.");
+      }
+      throw new Error("This run is taking longer than 10 minutes. Its server-side job may still be running; refresh the workspace before retrying.");
     } catch(e) {setError(e instanceof Error?e.message:"Unexpected error");} finally {setBusy(false);}
   }
   async function runPanel() {
@@ -50,7 +66,7 @@ export function AgentWorkbench({agent}:{agent:Agent}) {
         <Button className="w-full" disabled={busy||input.trim().length<10||(agent.slug==="consumer"&&!profileConfirmed)} onClick={agent.slug==="consumer"?runPanel:runAgent}>{busy?<><Loader2 className="animate-spin" size={16}/> Running agent…</>:<><Play size={15}/>{agent.slug==="consumer"?`Run ${count}-buyer panel`:"Run "+agent.name+" agent"}<ArrowRight size={15}/></>}</Button>
         <p className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400"><Clock3 size={12}/> Outputs are saved in the server-side founder/ workspace.</p>
       </Card>
-      <Card className="min-h-[560px] p-5 md:p-6"><div className="flex items-center justify-between border-b border-line pb-4"><div><h2 className="font-bold">Agent output</h2><p className="mt-1 text-xs text-slate-500">{savedFile? `Saved to founder/${savedFile}`:"Results appear here after a run."}</p></div>{result&&<Badge tone="good"><CheckCircle2 size={12} className="mr-1"/> Saved</Badge>}</div>{busy?<div className="flex h-[430px] flex-col items-center justify-center text-center"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-blue-50 text-navy"><Loader2 className="animate-spin" size={25}/></div><p className="mt-4 font-semibold">Working through the evidence</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">The server is applying the original skill instructions. Board runs three independent lens assessments; the consumer panel runs one model call per synthetic buyer.</p><div className="mt-6 h-1.5 w-56 overflow-hidden rounded-full bg-slate-100"><div className="h-full w-1/2 animate-pulse rounded-full bg-navy"/></div></div>:error?<div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>:result?<article className="prose-output max-h-[700px] overflow-y-auto pt-4 text-sm"><ReactMarkdown>{result}</ReactMarkdown></article>:<div className="flex h-[430px] flex-col items-center justify-center text-center"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Bot size={24}/></div><p className="mt-4 font-semibold text-slate-700">No output yet</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">Complete the brief and run this agent. Results and files will appear in this panel.</p></div>}</Card>
+      <Card className="min-h-[560px] p-5 md:p-6"><div className="flex items-center justify-between border-b border-line pb-4"><div><h2 className="font-bold">Agent output</h2><p className="mt-1 text-xs text-slate-500">{savedFile? `Saved to founder/${savedFile}`:"Results appear here after a run."}</p></div>{result&&<Badge tone="good"><CheckCircle2 size={12} className="mr-1"/> Saved</Badge>}</div>{busy?<div className="flex h-[430px] flex-col items-center justify-center text-center"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-blue-50 text-navy"><Loader2 className="animate-spin" size={25}/></div><p className="mt-4 font-semibold">{progress}</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">This task runs in the background. You can keep this page open while progress is checked automatically; long AI responses no longer depend on one browser request.</p><div className="mt-6 h-1.5 w-56 overflow-hidden rounded-full bg-slate-100"><div className="h-full w-1/2 animate-pulse rounded-full bg-navy"/></div></div>:error?<div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>:result?<article className="prose-output max-h-[700px] overflow-y-auto pt-4 text-sm"><ReactMarkdown>{result}</ReactMarkdown></article>:<div className="flex h-[430px] flex-col items-center justify-center text-center"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Bot size={24}/></div><p className="mt-4 font-semibold text-slate-700">No output yet</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">Complete the brief and run this agent. Results and files will appear in this panel.</p></div>}</Card>
     </div>
   </div>;
 }
