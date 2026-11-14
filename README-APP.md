@@ -6,7 +6,7 @@ This is an additive Next.js interface for the original Founder Skill project by 
 
 - Node.js 20.9+
 - Python 3.10+
-- OpenAI API key with API billing enabled
+- Gemini API key from Google AI Studio (free tier available for selected models)
 
 ## Run locally
 
@@ -18,21 +18,39 @@ npm install
 cp .env.example .env.local
 ```
 
-Add your key to `.env.local`:
+Create a free Gemini API key at https://aistudio.google.com/app/apikey, then add it to `.env.local`:
 
 ```dotenv
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-4o-mini
-PANEL_CONCURRENCY=4
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3.8-flash
+PANEL_CONCURRENCY=2
+MODEL_INPUT_USD_PER_MILLION=0
+MODEL_OUTPUT_USD_PER_MILLION=0
 ```
 
-Never commit `.env.local`. Then start:
+Never commit `.env.local` or expose the key in browser code. Then start:
 
 ```bash
 npm run dev
 ```
 
 Open http://localhost:3000.
+
+To use OpenAI instead, set `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
+
+## Using the app
+
+1. Start on the dashboard and describe the business idea, target customer, problem, solution, location and current stage.
+2. Run Board first to challenge the idea and expose weak assumptions.
+3. Continue through Competitors and Consumer. The panel generates synthetic personas, not real customers.
+4. Use Pricing once the offer, currency and price assumptions are clear. At least five complete price responses are needed for Van Westendorp analysis.
+5. Use Offer to define the product, target buyer and reason to choose it.
+6. Complete CFO inputs using `skills/founder-cfo/example.json` as the schema reference. Enter realistic costs and sales capacity.
+7. Continue through Marketing, Brand, Ops and Launch. Correct assumptions before accepting outputs.
+8. Open Plan last, review missing evidence and the verdict, then export Markdown or PDF.
+
+The model's outputs are hypotheses, not proof of demand or investment advice. Verify market facts and financial assumptions independently.
 
 ## Validation
 
@@ -42,28 +60,18 @@ npm run typecheck
 npm run build
 ```
 
-## How the pipeline works (10 lines)
+## Free-tier limits and privacy
 
-1. **Board** reads the founder's idea and constraints; writes `founder/idea.md`, board member lens memos and `founder/board.md`.
-2. **Competitors** reads the idea and market context; writes `founder/competitors.csv` and `founder/competitors.md`.
-3. **Consumer** reads the customer profile and pitch; creates `founder/customer.json`, `founder/pitch.md`, buyer personas, briefs and answer files under `founder/panel/`.
-4. **Pricing** reads the panel's four price responses and competitor prices; writes a Van Westendorp price curve and `founder/pricing.md`.
-5. **Offer** reads the idea, pitch, objections, board conditions and economics; writes `founder/offer.md` and may refine the pitch.
-6. **CFO** reads `founder/numbers.json`; writes unit contribution, margin, break-even, year-one projections, cash requirement and payback to `founder/cfo.md`.
-7. **Marketing** reads the panel, competitors, offer, pricing and economics; writes `founder/marketing.md` with positioning, channels and campaign tests.
-8. **Brand** reads the positioning, competitors and customer preferences; writes `founder/brand.md` with name, voice, promise and visual direction.
-9. **Ops** reads the idea, offer and cost assumptions; writes `founder/ops.md` and can update `founder/numbers.json`.
-10. **Launch → Plan**: Launch writes `founder/launch.md`; Plan reads the accumulated files and compiles `founder/business-plan.md` with a computed verdict.
+Gemini free-tier quotas depend on the selected model and can include requests-per-minute, tokens-per-minute and requests-per-day limits. Check the current quota in Google AI Studio. Free access is not unlimited. Google states that content submitted on the free tier may be used to improve its products. Do not submit confidential business, customer or personal data unless you accept the provider's terms.
 
-## App behavior and caveats
+## App caveats
 
-- Each agent page loads the corresponding original `skills/founder-*/SKILL.md` on the server and calls the OpenAI API. The key is never sent to the browser.
-- The four original Python scripts run as server-side subprocesses using fixed, allow-listed script paths. Workspace data is stored in `founder/`.
-- The consumer panel is explicitly synthetic, uses bounded concurrency, and does not represent real customer interviews. Its cost display is an estimate.
-- The app requires all core workflow outputs, including panel results, before it will display a positive verdict. This is stricter than the original compiler's permissive handling of absent panel evidence.
-- Markdown and PDF exports are generated server-side.
-- This starter has no login, tenant isolation, or persistent hosted database. Do not expose it publicly until authentication, rate limiting, durable storage and deployment-specific Python support are added.
+- The four original Python scripts run server-side using fixed, allow-listed script paths.
+- Workspace data is stored in `founder/`; ephemeral hosting may lose it after restart.
+- The starter app has no login, tenant isolation, request throttling or persistent hosted database. Do not expose it publicly until these are added.
+- Consumer-panel outputs are synthetic and must not be presented as actual interviews.
+- The cost display is an estimate, not a billing guarantee.
 
 ## Attribution
 
-Original project: [Jake Schincariol - founder-skill](https://github.com/Jakeschincariol/founder-skill). The original MIT `LICENSE` and copyright notice are retained. The web application is a separate additive layer.
+Original project: [Jake Schincariol - founder-skill](https://github.com/Jakeschincariol/founder-skill). The original MIT license and copyright notice are retained. The web application is an additive layer.
