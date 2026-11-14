@@ -77,23 +77,36 @@ Score: <1-10> | Vote: FUND / FUND IF / PASS
 
 Read the three memos (they are short) and write `founder/board.md`:
 
-1. The vote, e.g. "2 fund if, 1 pass", and the average score.
-2. The risks more than one member raised: these go first.
-3. Every condition, merged, as a checklist the rest of the pack can tick off
-   (the CFO, the consumer panel and pricing will test most of them).
-4. One paragraph: the strongest version of this business the board can see.
-   It may differ from what the user pitched; say so plainly.
+1. Exact vote tally and average score. Show the arithmetic and use only the three memos.
+2. Risks raised by more than one member. Name which members raised each risk.
+3. A short checklist of realistic next steps. Remove duplicates and resolve conflicts.
+   Do not make every suggestion a strict condition. Mark unsupported numbers as
+   "proposed test target, not a proven benchmark".
+4. The strongest focused version of the business.
+5. Disagreements and open questions that still need evidence.
 
 Keep the members' disagreements. A board that agrees on everything was not doing
-its job.
+its job. Use simple everyday English, short sentences and clear explanations.
+Avoid jargon and long paragraphs.
 
 ## Rules
 
 - Score the business, not the founder.
-- No made-up facts. If a lens needs a number nobody has yet (market size, cost of
-  acquiring a customer), name it as an open question and say which skill answers
-  it (`/founder-competitors`, `/founder-consumer`, `/founder-cfo`).
+- No made-up facts. If a lens needs a number nobody has yet (market size, customer
+  acquisition cost, booking value or margins), say "Not known yet" and name the
+  skill that can help estimate or test it (`/founder-competitors`,
+  `/founder-consumer`, `/founder-cfo`).
+- Do not confuse bookings, total booking value and commission revenue.
+- Do not require a patent or proprietary technology by default. A small business
+  can build an advantage through trust, reliable service, supplier relationships
+  and local knowledge.
+- Do not set large revenue or provider targets without evidence. Suggest small,
+  measurable pilot tests instead, and label them as proposals.
+- Prefer one city and one service type for the first pilot unless the founder
+  has evidence and resources to support a wider launch.
 - A PASS is a result, not a failure. Say it plainly.
+- Write for a non-expert: use plain English, short sentences, explain business
+  terms, and avoid jargon, hype and unnecessary complexity.
 
 ## Output
 
