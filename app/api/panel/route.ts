@@ -14,7 +14,7 @@ async function buyerCall(api: { apiKey: string; baseURL: string; model: string }
   const response = await fetch(`${api.baseURL}chat/completions`, {
     method: "POST", headers: { Authorization: `Bearer ${api.apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model: api.model, temperature: 0.7, response_format: { type: "json_object" }, messages: [
-      { role: "system", content: "You are a synthetic customer persona. Answer only as the persona in the supplied brief. Do not be polite or agreeable by default. Return JSON with buys (boolean), reason_code (price, habit, need, trust, quality, convenience, timing, values, other), reason (string), and optional numeric price_too_cheap, price_cheap, price_expensive, price_too_expensive in the stated currency. Include all four price fields only if the product and currency are clear; otherwise return null for them. These are synthetic responses, not real interviews." },
+      { role: "system", content: "You are a synthetic customer persona. Answer only as the persona in the supplied brief. Do not be polite or agreeable by default. Return JSON with id, buys (boolean), purchases_first_month (integer, 0 if not buying), reason_code (price, habit, need, trust, quality, convenience, timing, values, other), reason (string in the buyer's own voice), objection (main doubt in the buyer's own words), would_change_my_mind (one factor that could change the decision, or empty string), and optional numeric price_too_cheap, price_cheap, price_expensive, price_too_expensive in the stated currency. Include all four price fields only if the product and currency are clear; otherwise return null for them. These are synthetic responses, not real interviews." },
       { role: "user", content: brief }
     ] })
   });
@@ -54,7 +54,19 @@ export async function POST(request: Request) {
           const answer = await buyerCall(ai, `Original consumer research skill:\n${skill}\n\nBuyer brief:\n${brief}`);
           const codes = ["price","habit","need","trust","quality","convenience","timing","values","other"];
           const price = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? v : null;
-          const normalized = { id: persona.id, buys: Boolean(answer.buys), reason_code: codes.includes(answer.reason_code) ? answer.reason_code : "other", reason: String(answer.reason || "").slice(0, 1200), price_too_cheap: price(answer.price_too_cheap), price_cheap: price(answer.price_cheap), price_expensive: price(answer.price_expensive), price_too_expensive: price(answer.price_too_expensive) };
+          const normalized = {
+            id: persona.id,
+            buys: Boolean(answer.buys),
+            purchases_first_month: Math.max(0, Math.min(100, Math.floor(Number(answer.purchases_first_month) || 0))),
+            reason_code: codes.includes(answer.reason_code) ? answer.reason_code : "other",
+            reason: String(answer.reason || "").slice(0, 1200),
+            objection: String(answer.objection || "").slice(0, 800),
+            would_change_my_mind: String(answer.would_change_my_mind || "").slice(0, 800),
+            price_too_cheap: price(answer.price_too_cheap),
+            price_cheap: price(answer.price_cheap),
+            price_expensive: price(answer.price_expensive),
+            price_too_expensive: price(answer.price_too_expensive)
+          };
           await writeWorkspaceFile(`panel/answers/${persona.id}.json`, JSON.stringify(normalized, null, 2));
         } catch (error) { errors.push(`${persona.id}: ${error instanceof Error ? error.message : "failed"}`); }
       }
