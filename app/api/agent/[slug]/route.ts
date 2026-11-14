@@ -66,7 +66,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         const extracted = typeof content === "string"
           ? content
           : Array.isArray(content)
-            ? content.map((part: any) => typeof part?.text === "string" ? part.text : "").join("\\n")
+            ? content.map((part: any) => typeof part?.text === "string" ? part.text : "").join("\n")
             : "";
         if (extracted.trim()) {
           result = extracted.trim();
