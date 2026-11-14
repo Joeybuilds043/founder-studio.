@@ -8,7 +8,7 @@ import { getAIConfig } from "@/lib/ai-config";
 export const runtime = "nodejs";
 const schema = z.object({
   customer: z.object({ business: z.string(), target: z.string(), segments: z.array(z.object({ name: z.string(), income: z.array(z.number()).length(2), share: z.number().optional() })).min(1), behaviours: z.array(z.object({ name: z.string(), share: z.number().optional(), how: z.string().optional() })).min(1), objections: z.array(z.string()).min(1), age: z.array(z.number()).optional(), habits: z.array(z.string()).optional() }),
-  pitch: z.string().min(10).max(8000), count: z.number().int().min(5).max(50)
+  pitch: z.string().min(10).max(8000), count: z.number().int().min(5).max(100)
 });
 async function buyerCall(api: { apiKey: string; baseURL: string; model: string }, brief: string) {
   const response = await fetch(`${api.baseURL}chat/completions`, {
