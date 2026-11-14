@@ -34,7 +34,7 @@ export function AgentWorkbench({agent}:{agent:Agent}) {
       if(!data?.jobId)throw new Error("The server did not return a job ID. Please retry.");
       const deadline=Date.now()+10*60*1000;
       while(Date.now()<deadline) {
-        await new Promise(resolve=>setTimeout(resolve,1800));
+        await new Promise<void>(resolve=>window.setTimeout(()=>resolve(),1800));
         const poll=await fetch(`/api/agent/${agent.slug}?jobId=${encodeURIComponent(data.jobId)}`,{cache:"no-store"});
         const pollRaw=await poll.text();let status:any;try{status=pollRaw?JSON.parse(pollRaw):null;}catch{throw new Error(`Could not read job status (HTTP ${poll.status}).`);}
         if(!poll.ok)throw new Error(status?.error||`Job status request failed (HTTP ${poll.status})`);
