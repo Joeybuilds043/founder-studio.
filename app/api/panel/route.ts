@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { runPython } from "@/lib/python";
 import { FOUNDER_DIR, readSkill, writeWorkspaceFile } from "@/lib/server";
@@ -31,9 +32,10 @@ async function buyerCall(api: { apiKey: string; baseURL: string; model: string }
     throw new Error("AI provider returned buyer data that was not valid JSON. Try again or use a different free model.");
   }
 }
-export async function POST(request: Request) {
+async function executePanel(body: z.infer<typeof schema>, updateProgress: (message: string) => Promise<void>) {
   try {
-    const { customer, pitch, count } = schema.parse(await request.json());
+    const { customer, pitch, count } = body;
+    await updateProgress("Preparing synthetic buyer profiles");
     const ai = getAIConfig();
     if (!ai.apiKey) return NextResponse.json({ error: `${ai.provider.toUpperCase()} API key is missing on the server.` }, { status: 503 });
     await writeWorkspaceFile("customer.json", JSON.stringify(customer, null, 2));
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
     const errors: string[] = [];
     const codes = ["price","habit","need","trust","quality","convenience","timing","values","other"];
     const price = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? v : null;
+    let completed = 0;
     for (let offset = 0; offset < personas.length; offset += waveSize) {
       const wave = personas.slice(offset, offset + waveSize);
       await Promise.all(wave.map(async (persona) => {
@@ -69,16 +72,76 @@ export async function POST(request: Request) {
           await writeWorkspaceFile(`panel/answers/${persona.id}.json`, JSON.stringify(normalized, null, 2));
         } catch (error) { errors.push(`${persona.id}: ${error instanceof Error ? error.message : "failed"}`); }
       }));
+      completed += wave.length;
+      await updateProgress(`Collected ${completed} of ${personas.length} synthetic buyer responses`);
     }
     const check = await runPython("panel.py", ["check"]);
-    if (errors.length) return NextResponse.json({ error: "Some synthetic buyers failed.", errors, check: check.stdout }, { status: 502 });
+    if (errors.length) throw new Error(`Some synthetic buyers failed: ${errors.slice(0, 5).join("; ")}. ${check.stdout}`);
+    await updateProgress("Calculating buyer demand and price sensitivity");
     const tally = await runPython("panel.py", ["tally"]);
     const results = await readFile(path.join(panelDir, "results.md"), "utf8");
     await writeWorkspaceFile("panel/results.md", results);
     let pricing = "";
     try { const curveJson = await runPython("van_westendorp.py", ["founder/panel/answers", "--json"]); await writeWorkspaceFile("pricing-curve.json", curveJson.stdout); const priceResult = await runPython("van_westendorp.py", ["founder/panel/answers", "--out", "founder/pricing-curve.md"]); pricing = priceResult.stdout; } catch { pricing = "Not enough complete price responses for Van Westendorp analysis (at least five are required)."; }
-    return NextResponse.json({ count: personas.length, concurrency: waveSize, tally: tally.stdout, results, pricing, synthetic: true });
+    return { count: personas.length, concurrency: waveSize, tally: tally.stdout, results, pricing, synthetic: true };
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Panel run failed." }, { status: 400 });
+    throw error;
+  }
+}
+
+type PanelJob = { id: string; status: "queued" | "running" | "completed" | "failed"; progress: string; createdAt: string; updatedAt: string; result?: any; error?: string };
+const JOB_ID = /^[0-9a-f-]{36}$/i;
+async function persistJob(job: PanelJob) {
+  job.updatedAt = new Date().toISOString();
+  await writeWorkspaceFile(`jobs/${job.id}.json`, JSON.stringify(job, null, 2));
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = schema.parse(await request.json());
+    if (!getAIConfig().apiKey) return NextResponse.json({ error: "AI API key is missing on the server." }, { status: 503 });
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const job: PanelJob = { id, status: "queued", progress: "Queued for processing", createdAt: now, updatedAt: now };
+    await persistJob(job);
+    void (async () => {
+      try {
+        job.status = "running";
+        job.progress = "Starting synthetic buyer panel";
+        await persistJob(job);
+        job.result = await executePanel(body, async (progress) => {
+          job.progress = progress;
+          await persistJob(job);
+        });
+        job.status = "completed";
+        job.progress = "Complete";
+        await persistJob(job);
+      } catch (error) {
+        job.status = "failed";
+        job.error = error instanceof Error ? error.message : "Panel run failed.";
+        job.progress = "Failed";
+        await persistJob(job);
+      }
+    })();
+    return NextResponse.json({ jobId: id, status: job.status }, { status: 202 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid panel request." }, { status: 400 });
+  }
+}
+
+export async function GET(request: Request) {
+  const id = new URL(request.url).searchParams.get("jobId") || "";
+  if (!JOB_ID.test(id)) return NextResponse.json({ error: "A valid jobId is required." }, { status: 400 });
+  const raw = await readWorkspaceFile(`jobs/${id}.json`);
+  if (!raw) return NextResponse.json({ error: "Job not found. It may have expired or the server restarted." }, { status: 404 });
+  try {
+    const job = JSON.parse(raw) as PanelJob;
+    const age = Date.now() - new Date(job.updatedAt).getTime();
+    if ((job.status === "running" || job.status === "queued") && age > 20 * 60 * 1000) {
+      return NextResponse.json({ ...job, status: "failed", error: "This panel stopped making progress. Start it again." });
+    }
+    return NextResponse.json(job);
+  } catch {
+    return NextResponse.json({ error: "Panel status could not be read." }, { status: 500 });
   }
 }
