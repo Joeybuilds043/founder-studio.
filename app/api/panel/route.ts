@@ -4,7 +4,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { runPython } from "@/lib/python";
-import { FOUNDER_DIR, readSkill, writeWorkspaceFile } from "@/lib/server";
+import { FOUNDER_DIR, readSkill, readWorkspaceFile, writeWorkspaceFile } from "@/lib/server";
 import { getAIConfig } from "@/lib/ai-config";
 export const runtime = "nodejs";
 const schema = z.object({
