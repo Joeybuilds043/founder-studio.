@@ -6,30 +6,27 @@ import { readFile } from "node:fs/promises";
 import { runPython } from "@/lib/python";
 import { FOUNDER_DIR, readSkill, readWorkspaceFile, writeWorkspaceFile } from "@/lib/server";
 import { getAIConfig } from "@/lib/ai-config";
+import { completeChat } from "@/lib/ai-completion";
 export const runtime = "nodejs";
 const schema = z.object({
   customer: z.object({ business: z.string(), target: z.string(), segments: z.array(z.object({ name: z.string(), income: z.array(z.number()).length(2), share: z.number().optional() })).min(1), behaviours: z.array(z.object({ name: z.string(), share: z.number().optional(), how: z.string().optional() })).min(1), objections: z.array(z.string()).min(1), age: z.array(z.number()).optional(), habits: z.array(z.string()).optional() }),
   pitch: z.string().min(10).max(8000), count: z.number().int().min(5).max(100)
 });
 async function buyerCall(api: { apiKey: string; baseURL: string; model: string }, brief: string) {
-  const response = await fetch(`${api.baseURL}chat/completions`, {
-    method: "POST", headers: { Authorization: `Bearer ${api.apiKey}`, "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(25000),
-    body: JSON.stringify({ model: api.model, temperature: 0.7, response_format: { type: "json_object" }, messages: [
-      { role: "system", content: "You are a synthetic customer persona. Answer only as the persona in the supplied brief. Do not be polite or agreeable by default. Return JSON with id, buys (boolean), purchases_first_month (integer, 0 if not buying), reason_code (price, habit, need, trust, quality, convenience, timing, values, other), reason (string in the buyer's own voice), objection (main doubt in the buyer's own words), would_change_my_mind (one factor that could change the decision, or empty string), and optional numeric price_too_cheap, price_cheap, price_expensive, price_too_expensive in the stated currency. Include all four price fields only if the product and currency are clear; otherwise return null for them. These are synthetic responses, not real interviews." },
-      { role: "user", content: brief }
-    ] })
+  const completion = await completeChat({
+    apiKey: api.apiKey, baseURL: api.baseURL, model: api.model,
+    temperature: 0.7, maxTokens: 900,
+    system: "You are a synthetic customer persona. Answer only as the persona in the supplied brief. Do not be polite or agreeable by default. Return one valid JSON object only with id, buys (boolean), purchases_first_month (integer, 0 if not buying), reason_code (price, habit, need, trust, quality, convenience, timing, values, other), reason (string in the buyer's own voice), objection (main doubt in the buyer's own words), would_change_my_mind (one factor that could change the decision, or empty string), and optional numeric price_too_cheap, price_cheap, price_expensive, price_too_expensive in the stated currency. Include all four price fields only if the product and currency are clear; otherwise return null for them. These are synthetic responses, not real interviews.",
+    user: brief
   });
-  const raw = await response.text();
-  let data: any;
-  try { data = raw ? JSON.parse(raw) : null; } catch {
-    throw new Error(`AI provider returned an invalid or empty response (HTTP ${response.status}).`);
-  }
-  if (!response.ok) throw new Error(data?.error?.message || `Buyer model call failed (HTTP ${response.status}).`);
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("AI provider returned an empty buyer response.");
+  const content = completion.text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
   try { return JSON.parse(content); } catch {
-    throw new Error("AI provider returned buyer data that was not valid JSON. Try again or use a different free model.");
+    const first = content.indexOf("{");
+    const last = content.lastIndexOf("}");
+    if (first >= 0 && last > first) {
+      try { return JSON.parse(content.slice(first, last + 1)); } catch { /* handled below */ }
+    }
+    throw new Error(`AI model ${completion.model} returned buyer data that was not valid JSON.`);
   }
 }
 async function executePanel(body: z.infer<typeof schema>, updateProgress: (message: string) => Promise<void>) {
