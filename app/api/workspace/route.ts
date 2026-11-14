@@ -9,7 +9,7 @@ export async function GET() {
   const outputs = await readAllOutputs();
   let economics: Record<string, unknown> | null = null;
   if (files.includes("numbers.json")) {
-    try { const result = await runPython("unit_economics.py", ["--json"]); economics = JSON.parse(result.stdout); } catch { economics = null; }
+    try { const result = await runPython("unit_economics.py", ["founder/numbers.json", "--json"]); economics = JSON.parse(result.stdout); } catch { economics = null; }
   }
   let pricing: Record<string, unknown> | null = null;
   try { pricing = JSON.parse(await readWorkspaceFile("pricing-curve.json")); } catch { pricing = null; }

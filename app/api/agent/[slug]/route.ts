@@ -20,16 +20,14 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         const parsed = JSON.parse(body.input);
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           await writeWorkspaceFile("numbers.json", JSON.stringify(parsed, null, 2));
-          const calc = await runPython("unit_economics.py", ["--json"]);
+          const calc = await runPython("unit_economics.py", ["founder/numbers.json", "--json"]);
           pythonContext = `\n\nUNIT ECONOMICS TOOL OUTPUT (computed from founder/numbers.json):\n${calc.stdout}`;
         }
-      } catch { /* Free-form CFO brief is supported; the calculator requires valid numbers.json input. */ }
-    }
-    if (slug === "pricing") {
-      try {
-        const curve = await runPython("van_westendorp.py", ["founder/panel/answers", "--json"]);
-        pythonContext = `\n\nVAN WESTENDORP TOOL OUTPUT:\n${curve.stdout}`;
-      } catch { pythonContext = "\n\nVan Westendorp analysis is unavailable: fewer than five complete, valid price responses may exist."; }
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("Command failed")) {
+          return NextResponse.json({ error: "CFO numbers were saved, but the Python calculator rejected the schema. Check the original example at skills/founder-cfo/example.json." }, { status: 422 });
+        }
+      }
     }
     const skill = await readSkill(slug);
     const contextText = await readWorkspaceFile("idea.md");
