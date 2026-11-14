@@ -39,8 +39,7 @@ async function runBoard(ai: ReturnType<typeof getAIConfig>, idea: string, founde
   ];
   const brief = `# Founder board brief\n\n## Business idea\n${idea}\n\n## Founder context and constraints\n${founderContext || "No additional context supplied."}\n`;
   await writeWorkspaceFile("board/brief.md", brief);
-  const memos: string[] = [];
-  for (const lens of names) {
+  const memos = await Promise.all(names.map(async (lens) => {
     const start = lenses.indexOf(lens.heading);
     if (start < 0) throw new Error(`The original ${lens.label} lens was not found in lenses.md.`);
     const next = lenses.indexOf("\n## ", start + lens.heading.length);
@@ -49,8 +48,8 @@ async function runBoard(ai: ReturnType<typeof getAIConfig>, idea: string, founde
       `You are an independent member of a startup investment board applying ONLY the ${lens.label} lens. This is a framework summary, not the named author speaking. Score the business, not the founder. Be skeptical, do not invent facts, and keep unknowns explicit. Return Markdown using exactly these sections: Score (1-10) and Vote (FUND / FUND IF / PASS); What is strong; What would kill it (top 3, most dangerous first); Questions for the founder; Conditions if FUND IF.`,
       `BOARD BRIEF:\n${brief}\n\nYOUR ONLY FRAMEWORK:\n${lensText}\n\nApply this lens independently. Do not refer to other board members or claim to have interviewed real customers.`, 1800);
     await writeWorkspaceFile(`board/${lens.key}.md`, `# ${lens.label} lens\n\n${memo}\n`);
-    memos.push(`# ${lens.label} lens\n\n${memo}`);
-  }
+    return `# ${lens.label} lens\n\n${memo}`;
+  }));
   const chair = await completion(ai,
     "You are the chair of a skeptical startup investment committee. Synthesize three independent board memos without erasing disagreements. Never invent scores or votes. Return polished Markdown.",
     `BUSINESS IDEA:\n${idea}\n\nTHREE INDEPENDENT BOARD MEMOS:\n${memos.join("\n\n---\n\n")}\n\nWrite the consolidated board report with: (1) exact vote tally and average score calculated from the three memos only (if a score or vote is missing, say so); (2) risks raised by multiple members first; (3) merged conditions as a checklist for the rest of the pack; (4) strongest version of the business the board can see; (5) disagreements retained; (6) the next recommended skill. Do not claim this is a real investment decision.`, 3000);
