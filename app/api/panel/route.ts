@@ -4,15 +4,16 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { runPython } from "@/lib/python";
 import { FOUNDER_DIR, readSkill, writeWorkspaceFile } from "@/lib/server";
+import { getAIConfig } from "@/lib/ai-config";
 export const runtime = "nodejs";
 const schema = z.object({
   customer: z.object({ business: z.string(), target: z.string(), segments: z.array(z.object({ name: z.string(), income: z.array(z.number()).length(2), share: z.number().optional() })).min(1), behaviours: z.array(z.object({ name: z.string(), share: z.number().optional(), how: z.string().optional() })).min(1), objections: z.array(z.string()).min(1), age: z.array(z.number()).optional(), habits: z.array(z.string()).optional() }),
   pitch: z.string().min(10).max(8000), count: z.number().int().min(5).max(50)
 });
-async function buyerCall(key: string, model: string, brief: string) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, temperature: 0.7, response_format: { type: "json_object" }, messages: [
+async function buyerCall(api: { apiKey: string; baseURL: string; model: string }, brief: string) {
+  const response = await fetch(`${api.baseURL}chat/completions`, {
+    method: "POST", headers: { Authorization: `Bearer ${api.apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: api.model, temperature: 0.7, response_format: { type: "json_object" }, messages: [
       { role: "system", content: "You are a synthetic customer persona. Answer only as the persona in the supplied brief. Do not be polite or agreeable by default. Return JSON with buys (boolean), reason_code (price, habit, need, trust, quality, convenience, timing, values, other), reason (string), and optional numeric price_too_cheap, price_cheap, price_expensive, price_too_expensive in the stated currency. Include all four price fields only if the product and currency are clear; otherwise return null for them. These are synthetic responses, not real interviews." },
       { role: "user", content: brief }
     ] })
@@ -24,8 +25,8 @@ async function buyerCall(key: string, model: string, brief: string) {
 export async function POST(request: Request) {
   try {
     const { customer, pitch, count } = schema.parse(await request.json());
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) return NextResponse.json({ error: "OPENAI_API_KEY is missing on the server." }, { status: 503 });
+    const ai = getAIConfig();
+    if (!ai.apiKey) return NextResponse.json({ error: `${ai.provider.toUpperCase()} API key is missing on the server.` }, { status: 503 });
     await writeWorkspaceFile("customer.json", JSON.stringify(customer, null, 2));
     await writeWorkspaceFile("pitch.md", pitch);
     await runPython("panel.py", ["init", "--customer", "founder/customer.json", "--pitch", "founder/pitch.md", "--n", String(count), "--seed", "7"]);
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
         const persona = personas[index];
         try {
           const brief = await readFile(path.join(panelDir, "briefs", `${persona.id}.md`), "utf8");
-          const answer = await buyerCall(key, process.env.OPENAI_MODEL || "gpt-4o-mini", `Original consumer research skill:\n${skill}\n\nBuyer brief:\n${brief}`);
+          const answer = await buyerCall(ai, `Original consumer research skill:\n${skill}\n\nBuyer brief:\n${brief}`);
           const codes = ["price","habit","need","trust","quality","convenience","timing","values","other"];
           const price = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? v : null;
           const normalized = { id: persona.id, buys: Boolean(answer.buys), reason_code: codes.includes(answer.reason_code) ? answer.reason_code : "other", reason: String(answer.reason || "").slice(0, 1200), price_too_cheap: price(answer.price_too_cheap), price_cheap: price(answer.price_cheap), price_expensive: price(answer.price_expensive), price_too_expensive: price(answer.price_too_expensive) };
