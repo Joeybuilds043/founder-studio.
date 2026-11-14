@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: #f5f7fa; color: #17243a; font-family: Inter, Arial, sans-serif; }
+button, input, textarea, select { font: inherit; }
+::selection { background: #dbeafe; color: #163a70; }
+.prose-output h1,.prose-output h2,.prose-output h3 { color:#17243a; font-weight:700; margin:1.2em 0 .5em; }
+.prose-output p { color:#475569; line-height:1.75; margin:.7em 0; }
+.prose-output ul { list-style:disc; padding-left:1.4rem; color:#475569; }
+.prose-output ol { list-style:decimal; padding-left:1.4rem; color:#475569; }
+.prose-output li { margin:.35rem 0; }
+.prose-output strong { color:#1e293b; }
+.prose-output code { background:#f1f5f9; padding:.1rem .3rem; border-radius:.25rem; font-size:.9em; }
