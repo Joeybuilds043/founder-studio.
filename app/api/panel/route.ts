@@ -37,7 +37,7 @@ async function executePanel(body: z.infer<typeof schema>, updateProgress: (messa
     const { customer, pitch, count } = body;
     await updateProgress("Preparing synthetic buyer profiles");
     const ai = getAIConfig();
-    if (!ai.apiKey) return NextResponse.json({ error: `${ai.provider.toUpperCase()} API key is missing on the server.` }, { status: 503 });
+    if (!ai.apiKey) throw new Error(`${ai.provider.toUpperCase()} API key is missing on the server.`);
     await writeWorkspaceFile("customer.json", JSON.stringify(customer, null, 2));
     await writeWorkspaceFile("pitch.md", pitch);
     await runPython("panel.py", ["init", "--customer", "founder/customer.json", "--pitch", "founder/pitch.md", "--n", String(count), "--seed", "7"]);
