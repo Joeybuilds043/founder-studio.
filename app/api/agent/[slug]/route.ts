@@ -32,9 +32,9 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     }
     const skill = await readSkill(slug);
     const contextText = await readWorkspaceFile("idea.md");
-    const models = ai.provider === "openrouter"
-      ? [...new Set([ai.model, "qwen/qwen3-4b:free", "google/gemma-3-4b-it:free", "meta-llama/llama-3.3-70b-instruct:free"])]
-      : [ai.model];
+    // Use OpenRouter's free-only router. Do not add ordinary model slugs here:
+    // OpenRouter may route/fallback to paid models if a paid slug is included.
+    const models = ai.provider === "openrouter" ? ["openrouter/free"] : [ai.model];
     let result = "";
     let lastError = "";
     let usedModel = ai.model;
@@ -45,7 +45,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
           method: "POST",
           headers: { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" },
           // Bound each free-model attempt so a stalled provider cannot leave the browser waiting indefinitely.
-          signal: AbortSignal.timeout(12000),
+          signal: AbortSignal.timeout(20000),
           body: JSON.stringify({
             model, temperature: 0.3, max_tokens: 3500,
             messages: [
