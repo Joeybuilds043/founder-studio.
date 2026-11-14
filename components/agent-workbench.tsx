@@ -49,12 +49,27 @@ export function AgentWorkbench({agent}:{agent:Agent}) {
     } catch(e) {setError(e instanceof Error?e.message:"Unexpected error");} finally {setBusy(false);}
   }
   async function runPanel() {
-    setError("");setResult("");setBusy(true);
+    setError("");setResult("");setBusy(true);setProgress("Submitting buyer panel");
     try {
       const customer=JSON.parse(customerJson);
       const r=await fetch("/api/panel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({customer,pitch:input,count})});
-      const raw=await r.text();let data:any;try{data=raw?JSON.parse(raw):null;}catch{throw new Error(raw.trim().startsWith("<")?`App server returned an HTML error (HTTP ${r.status}). Restart the Codespace and check the server logs.`:`App server returned an empty or invalid response (HTTP ${r.status}).`);}if(!r.ok)throw new Error(data?.error||`Panel run failed (HTTP ${r.status})`);if(!data)throw new Error("App server returned an empty response.");
-      setResult(data.results);setSavedFile("panel/results.md");localStorage.setItem("founder-done-consumer","1");
+      const raw=await r.text();let data:any;try{data=raw?JSON.parse(raw):null;}catch{throw new Error(`App server returned an invalid response (HTTP ${r.status}).`);}
+      if(!r.ok)throw new Error(data?.error||`Panel run failed (HTTP ${r.status})`);
+      if(!data?.jobId)throw new Error("The server did not return a panel job ID. Please retry.");
+      const deadline=Date.now()+20*60*1000;
+      while(Date.now()<deadline) {
+        await new Promise(resolve=>setTimeout(resolve,1800));
+        const poll=await fetch(`/api/panel?jobId=${encodeURIComponent(data.jobId)}`,{cache:"no-store"});
+        const pollRaw=await poll.text();let status:any;try{status=pollRaw?JSON.parse(pollRaw):null;}catch{throw new Error(`Could not read panel status (HTTP ${poll.status}).`);}
+        if(!poll.ok)throw new Error(status?.error||`Panel status request failed (HTTP ${poll.status})`);
+        setProgress(status?.progress||"Processing synthetic buyers");
+        if(status?.status==="completed") {
+          if(!status.result?.results)throw new Error("The panel completed without returning results. Check the workspace and retry.");
+          setResult(status.result.results);setSavedFile("panel/results.md");localStorage.setItem("founder-done-consumer","1");return;
+        }
+        if(status?.status==="failed")throw new Error(status.error||"The synthetic buyer panel failed.");
+      }
+      throw new Error("The panel is taking longer than 20 minutes. Its server-side job may still be running; refresh the workspace before retrying.");
     } catch(e) {setError(e instanceof Error?e.message:"Check the customer JSON");} finally {setBusy(false);}
   }
   return <div className="space-y-6">
