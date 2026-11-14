@@ -44,6 +44,8 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         const response = await fetch(`${ai.baseURL}chat/completions`, {
           method: "POST",
           headers: { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" },
+          // Bound each free-model attempt so a stalled provider cannot leave the browser waiting indefinitely.
+          signal: AbortSignal.timeout(12000),
           body: JSON.stringify({
             model, temperature: 0.3, max_tokens: 3500,
             messages: [
