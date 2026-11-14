@@ -7,29 +7,14 @@ import { readFile } from "node:fs/promises";
 import { readSkill, readAllOutputs, readWorkspaceFile, saveAgentResult, safeSlug, writeWorkspaceFile } from "@/lib/server";
 import { runPython } from "@/lib/python";
 import { getAIConfig } from "@/lib/ai-config";
+import { completeChat } from "@/lib/ai-completion";
 import { gatherResearch, formatResearchForPrompt, formatResearchRegister, ResearchConfigError, needsLiveResearch } from "@/lib/research";
 export const runtime = "nodejs";
 const schema = z.object({ input: z.string().min(10).max(30000), idea: z.string().max(12000).optional() });
 
 async function completion(ai: ReturnType<typeof getAIConfig>, system: string, user: string, maxTokens = 3500) {
-  const model = ai.provider === "openrouter" ? "openrouter/free" : ai.model;
-  const response = await fetch(`${ai.baseURL}chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(55000),
-    body: JSON.stringify({ model, temperature: 0.3, max_tokens: maxTokens, messages: [
-      { role: "system", content: system },
-      { role: "user", content: user }
-    ] })
-  });
-  const raw = await response.text();
-  let payload: any;
-  try { payload = raw ? JSON.parse(raw) : null; } catch { throw new Error(`Invalid AI provider response (HTTP ${response.status}).`); }
-  if (!response.ok) throw new Error(payload?.error?.message || `AI provider request failed (HTTP ${response.status}).`);
-  const content = payload?.choices?.[0]?.message?.content;
-  const text = typeof content === "string" ? content : Array.isArray(content) ? content.map((part: any) => typeof part?.text === "string" ? part.text : "").join("\n") : "";
-  if (!text.trim()) throw new Error("The AI provider returned an empty response.");
-  return text.trim();
+  const completed = await completeChat({ apiKey: ai.apiKey, baseURL: ai.baseURL, model: ai.model, system, user, temperature: 0.3, maxTokens });
+  return completed.text;
 }
 
 async function runBoard(ai: ReturnType<typeof getAIConfig>, idea: string, founderContext: string, updateProgress: (message: string) => Promise<void>) {
