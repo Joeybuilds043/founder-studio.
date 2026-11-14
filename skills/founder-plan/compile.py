@@ -93,8 +93,10 @@ def verdict(d, min_buy_rate=0.25):
         r = panel["buy_rate"]
         checks.append((r >= min_buy_rate, "%d of %d simulated buyers buy (%.0f%%, the bar is %.0f%%)." % (
             panel["buys"], panel["answered"], r * 100, min_buy_rate * 100)))
-    if numbers is None:
+    if numbers is None or panel is None:
         v = "Incomplete"
+        if panel is None:
+            checks.append((False, "No completed buyer panel results yet; run founder-consumer before a verdict."))
     elif all(ok for ok, _ in checks):
         v = "Profitable"
     else:
