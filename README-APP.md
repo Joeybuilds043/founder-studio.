@@ -1,4 +1,4 @@
-# Founder Studio — Web application
+# Founder Studio - Web application
 
 This is an additive Next.js interface for the original Founder Skill project by Jake Schincariol. The upstream README, MIT license, 11 skill instructions, four Python tools, examples, plugin metadata and tests are preserved byte-for-byte.
 
@@ -66,4 +66,4 @@ npm run build
 
 ## Attribution
 
-Original project: [Jake Schincariol — founder-skill](https://github.com/Jakeschincariol/founder-skill). The original MIT `LICENSE` and copyright notice are retained. The web application is a separate additive layer.
+Original project: [Jake Schincariol - founder-skill](https://github.com/Jakeschincariol/founder-skill). The original MIT `LICENSE` and copyright notice are retained. The web application is a separate additive layer.
